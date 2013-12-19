@@ -15,10 +15,11 @@ wordmap.txt
 
 $ python calc_pzw.py > pzw.txt
 ```
-*calc_pzw.py* read *model-final.others*, *model-final.tassign* and *model-final.twords* and output results to Standard Output.
+*calc_pzw.py* read *model-final.others*, *model-final.tassign* and *model-final.twords*, and output results to Standard Output.
 
 
 ### Format
+Format of output file.
 
 ```
 word0
@@ -41,6 +42,6 @@ river
     0.8
     0.2
 money
-    0.84
     0.26
+    0.84
 ```
