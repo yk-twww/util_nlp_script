@@ -17,7 +17,7 @@ def main():
     for word in p_zw.keys():
         sys.stdout.write(word.encode('utf-8') + "\n")
         for prob in p_zw[word]:
-            sys.stdout.write(str(prob) + "\n")
+            sys.stdout.write("\t" + str(prob) + "\n")
 
 
 def extract_topic_num():
