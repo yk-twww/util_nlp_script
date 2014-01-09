@@ -4,85 +4,86 @@ import codecs
 import re
 from collections import defaultdict
 import sys
+import os
 import re
 
 
 NUM_STR = re.compile(u" ([0-9.]+)$")
 WORD_STR = re.compile(u"^(\\S+)")
 
+CWD_DIR = os.getcwd()
+REL_PATH = sys.argv[1] if len(sys.argv) == 2 else "."
+BASE_PATH = CWD_DIR + "/" + REL_PATH + "/"
+
+
 def main():
     topic_num = extract_topic_num()
-    p_zw = calc_pzw(topic_num)
+    p_zw      = calc_pzw(topic_num)
+    words     = extract_word()
 
-    for word in p_zw.keys():
-        sys.stdout.write(word.encode('utf-8') + "\n")
-        for prob in p_zw[word]:
-            sys.stdout.write("\t" + str(prob) + "\n")
+    for i, w_line in enumerate(p_zw):
+        out_line = words[i] + u"\t"
+        for prob in w_line:
+            out_line += str(prob).decode("utf-8") + u"\t"
+        out_line = out_line.rstrip(u"\t")
+        sys.stdout.write(out_line.encode('utf-8') + "\n")
 
 
 def extract_topic_num():
-    other_file = codecs.open("model-final.others", "r", "utf-8")
+    other_file = codecs.open(BASE_PATH + "model-final.others", "r", "utf-8")
     
     for raw_line in other_file:
         if re.search(u"ntopics", raw_line):
             res = re.search("\\d+$", raw_line.rstrip())
             num = int(res.group(0))
+            break
 
     return num
 
+def extract_word_num():
+    other_file = codecs.open(BASE_PATH + "model-final.others", "r", "utf-8")
+
+    for raw_line in other_file:
+        if re.search(u"nwords", raw_line):
+            res = re.search('\d+$', raw_line.rstrip())
+            wd_num = int(res.group(0))
+            break
+
+    return wd_num
 
 
 def calc_pzw(topic_num):
-    file_path = "model-final.twords"
-    twords_file = codecs.open(file_path, "r", "utf-8")
+    phi_file = codecs.open(BASE_PATH + "model-final.phi", "r", "utf-8")
+    p_wz = []
+    for raw_line in phi_file:
+        p_wz.append([float(_) for _ in raw_line.rstrip().split(u" ")])
+    phi_file.close()
 
-    p_zw = defaultdict(list)
-    tpc_n = -1
-    for raw_line in twords_file:
-        if decide_line(raw_line):
-            tpc_n += 1
-        else:
-            res = extract_info(raw_line)
-            p_zw[res[1]].append(res[0])
-    twords_file.close()
+    p_zw = zip(*p_wz)
 
-    p_zw = convert_prob(p_zw, topic_num)
+    return convert_prob(p_zw, topic_num)
 
-    return p_zw
+def convert_prob(_p_zw, topic_num):
+    wd_num = extract_word_num()
+    p_z = calc_pz(topic_num)
 
-
-def decide_line(raw_line):
-    return len(raw_line) >= 5 and raw_line[0:5] == u"Topic"
-
-
-def extract_info(raw_line):
-    raw_line = raw_line.rstrip().lstrip()
-
-    prob = NUM_STR.search(raw_line)
-    word = WORD_STR.search(raw_line)
-
-    return (float(prob.group(1)), word.group(1))
-
-
-def convert_prob(p_wz, topic_num):
-    p_z  = calc_pz(topic_num)
-    p_zw = defaultdict(list)
-
-    for word in p_wz.keys():
-        normal = sum(p_wz[word])
-        normal = 0.0
-        for i in range(len(p_wz[word])):
-            normal += p_wz[word][i] * p_z[i]
-        for i in range(len(p_wz[word])):
-            p_zw[word].append(p_wz[word][i] * p_z[i] / normal)
+    p_zw = []
+    for w in xrange(wd_num):
+        upper = []
+        nmlz = 0
+        for z in xrange(topic_num):
+            upper.append(p_z[z] * _p_zw[w][z])
+        nmlz = sum(upper)
+        p_zw.append([_ / nmlz for _ in upper])
 
     return p_zw
+
 
 
 
 def calc_pz(topic_num):
     file_path = "model-final.tassign"
-    assign_file = codecs.open(file_path, "r", "utf-8")
+    assign_file = codecs.open(BASE_PATH + file_path, "r", "utf-8")
 
     topic_count = [0 for _ in xrange(topic_num)]
     for raw_line in assign_file:
@@ -93,7 +94,6 @@ def calc_pz(topic_num):
     total = sum(topic_count) + 0.0
 
     return [cnt / total for cnt in topic_count]
-    
 
 def extract_topics(raw_line):
     pairs = raw_line.rstrip().split(u" ")
@@ -102,5 +102,19 @@ def extract_topics(raw_line):
     return topics
 
 
+def extract_word():
+    map_file = codecs.open(BASE_PATH + "wordmap.txt", "r", "utf-8")
+
+    words = []
+    map_file.readline() # abandon first line
+    for raw_line in map_file:
+        line = raw_line.rstrip()
+        fields = line.split(u" ")
+        words.append(fields[0])
+
+    return words
+
+
 if __name__ == "__main__":
     main()
+
