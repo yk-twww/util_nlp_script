@@ -70,11 +70,10 @@ def convert_prob(_p_zw, topic_num):
     p_zw = []
     for w in xrange(wd_num):
         upper = []
-        nmlz = 0
         for z in xrange(topic_num):
             upper.append(p_z[z] * _p_zw[w][z])
-        nmlz = sum(upper)
-        p_zw.append([_ / nmlz for _ in upper])
+        nmlz_rev = 1.0 / sum(upper)
+        p_zw.append([_ * nmlz_rev for _ in upper])
 
     return p_zw
 
@@ -91,9 +90,9 @@ def calc_pz(topic_num):
         for t in topics:
             topic_count[t] += 1
 
-    total = sum(topic_count) + 0.0
+    total_rev = 1.0 / sum(topic_count)
 
-    return [cnt / total for cnt in topic_count]
+    return [cnt * total_rev for cnt in topic_count]
 
 def extract_topics(raw_line):
     pairs = raw_line.rstrip().split(u" ")
